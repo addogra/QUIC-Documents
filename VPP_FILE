@@ -1,0 +1,352 @@
+
+
+
+VPP
+
+
+FOR VPP GDB 
+
+
+gdb /home/osboxes/vpp_sctp/vpp/build-root/install-vpp_debug-native/vpp/bin/vpp
+
+  set environment VCL_DEBUG=1
+  set environment VCL_APP_SCOPE_LOCAL=true
+
+
+
+
+
+r unix { interactive full-coredump coredump-size unlimited } api-segment { gid 0 } plugin_path /home/osboxes/vpp_sctp/vpp/build-root/install-vpp_debug-native/vpp/lib64/vpp_plugins/
+
+
+
+
+
+
+Server IN GDB 
+
+gdb /home/osboxes/vpp_sctp/vpp/build-root/install-vpp_debug-native/vpp/bin/vcl_test_server 
+ set environment VCL_DEBUG=1
+  set environment VCL_APP_PROXY_TRANSPORT_TCP=true
+ 
+r 22000 plugin_path /home/osboxes/vpp_sctp/vpp/build-root/install-vpp_debug-native/vpp/lib64/vpp_plugins/
+
+
+
+
+/home/osboxes/vpp_sctp/vpp/build-root/install-vpp_debug-native/vpp/bin/vcl_test_server 22000
+
+
+CLIENT IN GDB
+
+
+
+
+Starting the client in the gdb 
+
+ 
+
+
+
+gdb /home/osboxes/vpp_sctp/vpp/build-root/install-vpp_debug-native/vpp/bin/vcl_test_client 
+ set environment VCL_DEBUG=1
+  set environment VCL_APP_PROXY_TRANSPORT_TCP=true
+ 
+r 10.0.2.15 22000 plugin_path /home/osboxes/vpp_sctp/vpp/build-root/install-vpp_debug-native/vpp/lib64/vpp_plugins/
+
+
+
+
+
+
+CLIENT data 
+
+
+sock_test_client.c
+
+
+a) ctrl->fd = vppcom_app_create ("vcl_test_client");  ==> vppcom_connect_to_vpp () ==> vl_client_connect_to_vlib () ==> connect_to_vlib_internal ()
+ 
+
+b)  ctrl->fd = vppcom_session_create (VPPCOM_PROTO_TCP,
+                                        0 /* is_nonblocking */ );
+
+
+c)  rv = vppcom_session_connect (ctrl->fd, &scm->server_endpt);
+
+
+d)  Via echo_test_client  
+
+e)   sock_test_write () ==> vppcom_session_write ()  ==> svm_fifo_enqueue_nowait ()
+
+
+(gdb) bt
+#0  svm_fifo_enqueue_nowait (f=0x210f14fc0, max_bytes=52, copy_from_here=0x607248 <sock_client_main+72> "\316\372\355\376\001") at /home/osboxes/vpp_sctp/vpp/build-data/../src/svm/svm_fifo.c:534
+#1  0x00007ffff798aae6 in vppcom_session_write (session_index=1, buf=0x607248 <sock_client_main+72>, n=52) at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/vppcom.c:3364
+#2  0x0000000000401f23 in sock_test_write (fd=1, buf=0x607248 <sock_client_main+72> "\316\372\355\376\001", nbytes=52, stats=0x0, verbose=0)
+    at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test.h:367
+#3  0x00000000004020d2 in sock_test_cfg_sync (socket=0x60a600) at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c:53
+#4  0x00000000004023de in echo_test_client () at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c:114
+#5  0x0000000000404cfe in main (argc=5, argv=0x7fffffffe448) at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c:1023
+(gdb) 
+
+
+(gdb) p *f
+$20 = {
+  cursize = 0,
+  nitems = 1048576,
+  end_cursize = 0x210f15000 "",
+  has_event = 0,
+  master_session_index = 3,
+  client_session_index = 1,
+  master_thread_index = 0 '\000',
+  client_thread_index = 0 '\000',
+  segment_manager = 0,
+  end_shared = 0x210f15040 "\236\001",
+  head = 414,
+  end_consumer = 0x210f15080 "\236\001",
+  tail = 414,
+  ooo_segments = 0x0,
+  ooos_list_head = 4294967295,
+  ooos_newest = 4294967295,
+  next = 0x0,
+  prev = 0x0,
+  freelist_index = 8,
+  refcnt = 1 '\001',
+  data = 0x210f150c0 "\316\372\355\376"
+}
+
+
+
+
+
+Thread 1 "vcl_test_client" hit Breakpoint 2, vppcom_session_write (session_index=1, buf=0x607248 <sock_client_main+72>, n=52) at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/vppcom.c:3309
+3309	{
+(gdb) bt
+#0  vppcom_session_write (session_index=1, buf=0x607248 <sock_client_main+72>, n=52) at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/vppcom.c:3309
+#1  0x0000000000401f23 in sock_test_write (fd=1, buf=0x607248 <sock_client_main+72> "\316\372\355\376\001", nbytes=52, stats=0x0, verbose=0)
+    at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test.h:367
+#2  0x00000000004020d2 in sock_test_cfg_sync (socket=0x60a600) at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c:53
+#3  0x00000000004023de in echo_test_client () at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c:114
+#4  0x0000000000404cfe in main (argc=5, argv=0x7fffffffe448) at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c:1023
+(gdb) 
+
+
+
+
+
+(gdb) b echo_test_client
+Breakpoint 1 at 0x402248: file /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c, line 93.
+(gdb) c
+Continuing.
+
+
+CLIENT: Nothing to send!  Please try again...
+
+Thread 1 "vcl_test_client" hit Breakpoint 1, echo_test_client () at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c:93
+93	{
+(gdb) bt
+#0  echo_test_client () at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c:93
+#1  0x0000000000404cfe in main (argc=5, argv=0x7fffffffe448) at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c:1023
+(gdb) c
+Continuing.
+CLIENT (fd 1): TX (2 bytes) - '
+'
+CLIENT (fd 1): RX (2 bytes) - '
+'
+
+CLIENT: Type some characters and hit <return>
+('#H' for help): adsdssda
+
+Thread 1 "vcl_test_client" hit Breakpoint 1, echo_test_client () at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c:93
+93	{
+(gdb) bt
+#0  echo_test_client () at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c:93
+#1  0x0000000000404cfe in main (argc=5, argv=0x7fffffffe448) at /home/osboxes/vpp_sctp/vpp/build-data/../src/vcl/sock_test_client.c:1023
+(gdb) n
+94	  sock_client_main_t *scm = &sock_client_main;
+(gdb) n
+95	  sock_test_socket_t *ctrl = &scm->ctrl_socket;
+(gdb) n
+100	  int nfds = 0;
+(gdb) 
+102	  fd_set _wfdset, *wfdset = &_wfdset;
+(gdb) 
+103	  fd_set _rfdset, *rfdset = &_rfdset;
+(gdb) 
+105	  FD_ZERO (&wr_fdset);
+(gdb) 
+106	  FD_ZERO (&rd_fdset);
+(gdb) 
+107	  memset (&ctrl->stats, 0, sizeof (ctrl->stats));
+(gdb) 
+108	  ctrl->cfg.total_bytes = nbytes = strlen (ctrl->txbuf) + 1;
+(gdb) 
+109	  for (n = 0; n != ctrl->cfg.num_test_sockets; n++)
+(gdb) 
+111	      tsock = &scm->test_socket[n];
+(gdb) 
+112	      tsock->cfg = ctrl->cfg;
+(gdb) 
+113	      sock_test_socket_buf_alloc (tsock);
+(gdb) 
+114	      sock_test_cfg_sync (tsock);
+(gdb) 
+116	      memcpy (tsock->txbuf, ctrl->txbuf, nbytes);
+(gdb) 
+117	      memset (&tsock->stats, 0, sizeof (tsock->stats));
+(gdb) p tsock
+$1 = (sock_test_socket_t *) 0x60a600
+(gdb) p *tsock
+$2 = {fd = 1, txbuf_size = 8192, txbuf = 0x60a6b0 "adsdssda", rxbuf_size = 524288, rxbuf = 0x7ffff7ed3010 "\316\372\355\376\001", cfg = {magic = 4277009102, test = 1, ctrl_handle = 4294967295, 
+    num_test_sockets = 1, verbose = 0, rxbuf_size = 524288, txbuf_size = 8192, num_writes = 1000000, total_bytes = 9}, stats = {rx_xacts = 1, rx_bytes = 2, rx_eagain = 0, rx_incomp = 0, 
+    tx_xacts = 1, tx_bytes = 2, tx_eagain = 0, tx_incomp = 0, start = {tv_sec = 1518495615, tv_nsec = 252370455}, stop = {tv_sec = 1518495615, tv_nsec = 253259809}}}
+(gdb) n
+119	      FD_SET (tsock->fd, &wr_fdset);
+(gdb) p *wr_fdset
+Structure has no component named operator*.
+(gdb) p wr_fdset
+$3 = {__fds_bits = {0 <repeats 16 times>}}
+(gdb) np tsock->fd
+Undefined command: "np".  Try "help".
+(gdb) p tsock->fd
+$4 = 1
+(gdb) n
+120	      FD_SET (tsock->fd, &rd_fdset);
+(gdb) n
+121	      nfds = ((tsock->fd + 1) > nfds) ? (tsock->fd + 1) : nfds;
+(gdb) p wr_fdset
+$5 = {__fds_bits = {2, 0 <repeats 15 times>}}
+(gdb) n
+109	  for (n = 0; n != ctrl->cfg.num_test_sockets; n++)
+(gdb) p ctrl
+$6 = (sock_test_socket_t *) 0x607228 <sock_client_main+40>
+(gdb) p *ctrl
+$7 = {fd = 0, txbuf_size = 8192, txbuf = 0x6081e0 "adsdssda", rxbuf_size = 524288, rxbuf = 0x7ffff7f54010 "", cfg = {magic = 4277009102, test = 1, ctrl_handle = 4294967295, num_test_sockets = 1, 
+    verbose = 0, rxbuf_size = 524288, txbuf_size = 8192, num_writes = 1000000, total_bytes = 9}, stats = {rx_xacts = 0, rx_bytes = 0, rx_eagain = 0, rx_incomp = 0, tx_xacts = 0, tx_bytes = 0, 
+    tx_eagain = 0, tx_incomp = 0, start = {tv_sec = 0, tv_nsec = 0}, stop = {tv_sec = 0, tv_nsec = 0}}}
+(gdb) n
+124	  nfds++;
+(gdb) n
+125	  clock_gettime (CLOCK_REALTIME, &ctrl->stats.start);
+(gdb) n
+126	  while (n)
+(gdb) n
+128	      _wfdset = wr_fdset;
+(gdb) p wr_fdset
+$8 = {__fds_bits = {2, 0 <repeats 15 times>}}
+(gdb) n
+129	      _rfdset = rd_fdset;
+(gdb) p rd_fdset
+$9 = {__fds_bits = {2, 0 <repeats 15 times>}}
+(gdb) n
+132	      rv = vppcom_select (nfds, (uint64_t *) rfdset, (uint64_t *) wfdset,
+(gdb) n
+142	      if (rv < 0)
+(gdb) n
+149	      else if (rv == 0)
+(gdb) n
+152	      for (i = 0; i < ctrl->cfg.num_test_sockets; i++)
+(gdb) n
+154		  tsock = &scm->test_socket[i];
+(gdb) n
+155		  if (!((tsock->stats.stop.tv_sec == 0) &&
+(gdb) n
+156			(tsock->stats.stop.tv_nsec == 0)))
+(gdb) n
+155		  if (!((tsock->stats.stop.tv_sec == 0) &&
+(gdb) 
+159		  if (FD_ISSET (tsock->fd, wfdset) &&
+(gdb) 
+160		      (tsock->stats.tx_bytes < ctrl->cfg.total_bytes))
+(gdb) 
+159		  if (FD_ISSET (tsock->fd, wfdset) &&
+(gdb) 
+164			sock_test_write (tsock->fd, (uint8_t *) tsock->txbuf, nbytes,
+(gdb) 
+163		      tx_bytes =
+(gdb) 
+166		      if (tx_bytes < 0)
+(gdb) !!!! This is where data is transmitted !!!!
+bash: !!!: command not found
+(gdb) n
+173		      printf ("CLIENT (fd %d): TX (%d bytes) - '%s'\n",
+(gdb) n
+CLIENT (fd 1): TX (9 bytes) - 'adsdssda'
+177		  if ((FD_ISSET (tsock->fd, rfdset)) &&
+(gdb) n
+195		  if (tsock->stats.rx_bytes >= ctrl->cfg.total_bytes)
+(gdb) 
+152	      for (i = 0; i < ctrl->cfg.num_test_sockets; i++)
+(gdb) 
+126	  while (n)
+(gdb) 
+128	      _wfdset = wr_fdset;
+(gdb) 
+129	      _rfdset = rd_fdset;
+(gdb) 
+132	      rv = vppcom_select (nfds, (uint64_t *) rfdset, (uint64_t *) wfdset,
+(gdb) 
+142	      if (rv < 0)
+(gdb) 
+149	      else if (rv == 0)
+(gdb) !!! SERVER DID transmit the same data at this time !!
+bash: !!: command not found
+(gdb) n
+152	      for (i = 0; i < ctrl->cfg.num_test_sockets; i++)
+(gdb) 
+154		  tsock = &scm->test_socket[i];
+(gdb) 
+155		  if (!((tsock->stats.stop.tv_sec == 0) &&
+(gdb) 
+156			(tsock->stats.stop.tv_nsec == 0)))
+(gdb) 
+155		  if (!((tsock->stats.stop.tv_sec == 0) &&
+(gdb) 
+159		  if (FD_ISSET (tsock->fd, wfdset) &&
+(gdb) 
+160		      (tsock->stats.tx_bytes < ctrl->cfg.total_bytes))
+(gdb) 
+159		  if (FD_ISSET (tsock->fd, wfdset) &&
+(gdb) 
+177		  if ((FD_ISSET (tsock->fd, rfdset)) &&
+(gdb) 
+178		      (tsock->stats.rx_bytes < ctrl->cfg.total_bytes))
+(gdb) 
+177		  if ((FD_ISSET (tsock->fd, rfdset)) &&
+(gdb) 
+181			sock_test_read (tsock->fd, (uint8_t *) tsock->rxbuf,
+(gdb) 
+180		      rx_bytes =
+(gdb) 
+183		      if (rx_bytes > 0)
+(gdb) 
+185			  printf ("CLIENT (fd %d): RX (%d bytes) - '%s'\n",
+(gdb) 
+CLIENT (fd 1): RX (9 bytes) - 'adsdssda'
+188			  if (tsock->stats.rx_bytes != tsock->stats.tx_bytes)
+(gdb) n
+195		  if (tsock->stats.rx_bytes >= ctrl->cfg.total_bytes)
+(gdb) 
+197		      clock_gettime (CLOCK_REALTIME, &tsock->stats.stop);
+(gdb) 
+198		      n--;
+(gdb) 
+152	      for (i = 0; i < ctrl->cfg.num_test_sockets; i++)
+(gdb) 
+126	  while (n)
+(gdb) 
+202	  clock_gettime (CLOCK_REALTIME, &ctrl->stats.stop);
+(gdb) 
+204	  for (i = 0; i < ctrl->cfg.num_test_sockets; i++)
+(gdb) 
+206	      tsock = &scm->test_socket[i];
+(gdb) 
+207	      tsock->stats.start = ctrl->stats.start;
+(gdb) 
+209	      if (ctrl->cfg.verbose)
+(gdb) 
+219	      sock_test_stats_accumulate (&ctrl->stats, &tsock->stats);
+(gdb) 
+204	  for (i = 0; i < ctrl->cfg.num_test_sockets; i++)
+(gdb) 
